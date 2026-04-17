@@ -1,0 +1,52 @@
+% ============================================================
+% 阶段语义与官方页装配钩子
+% ============================================================
+
+\makeatletter
+
+% ============================================================
+% 官方页插入宏（默认由装配层使用，此处保留后备能力）
+% ============================================================
+\newcommand{\insertofficialpage}[1]{%
+	\clearpage
+	\thispagestyle{empty}
+	\begin{textblock}{1}(-0.8,-0.08)
+		\colorbox{white}{%
+			\includegraphics[height=1.2448\textheight]{#1}%
+		}
+	\end{textblock}
+}
+
+\newcommand{\origin}{%
+	\insertofficialpage{原创性声明.pdf}%
+}
+
+% ============================================================
+% 阶段语义补丁
+% ============================================================
+% pkuthss 的英文摘要默认只区分 blind/non-blind，这里补成：
+% blind: 不显示作者/导师块
+% defense: 显示作者，隐藏导师
+% final: 显示作者和导师
+\renewenvironment{eabstract}{%
+	\thss@int@pdfmark{\eabstractname}{eabstract}%
+	\chapter*{{\thssunscaledarial\@etitle}}\markboth{\eabstractname}{}%
+	\ifblind
+		\begin{center}{\thssunscaledarial\bfseries\eabstractname}\end{center}\par%
+	\else
+		\begin{center}%
+			{\@eauthor} ({\@emajor})\\%
+			\ifshowmentor
+				{\label@ementor}{\@ementor}\\[2em]%
+			\else
+				\vspace*{2em}%
+			\fi
+			{\thssunscaledarial\bfseries\eabstractname}%
+		\end{center}\par%
+	\fi
+}{%
+	\vfill\noindent\label@ekeywords{\@ekeywords}%
+}
+
+\makeatother
+

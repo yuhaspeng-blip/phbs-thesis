@@ -371,7 +371,7 @@
         breaklinks         = true,
         plainpages         = false,
         pdfdisplaydoctitle = true,
-        hidelinks,
+        hidelinks
     }%
 
 	\ifthss@opt@pdftoc

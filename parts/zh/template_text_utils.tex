@@ -1,0 +1,133 @@
+% ============================================================
+% 文本与元数据工具
+% ============================================================
+
+% 英文引号
+\newcommand{\enquote}[1]{``{#1}''}
+% 英文标题专用引号：显式走拉丁文本引号，避免标题字体链把引号回退到 CJK 字体
+\newcommand{\titleenquote}[1]{\textquotedblleft#1\textquotedblright}
+% 中文引号
+\newcommand{\zhquote}[1]{“{#1}”}
+
+% 字体无关的勾选框，避免在 strict_pku 下出现勾偏到框外的问题
+\newcommand{\thesischeckboxsize}{0.88em}
+\newcommand{\thesischeckboxrule}{0.06em}
+\newcommand{\thesischeckrule}{0.10em}
+\newcommand{\thesischeckboxbase}{-0.74ex}
+\newcommand{\thesischeckboxnode}[1]{%
+	\tikz[baseline=\thesischeckboxbase, x=1em, y=1em]{#1}%
+}
+% 方框
+\renewcommand{\Box}{%
+	\thesischeckboxnode{%
+		\draw[line width=\thesischeckboxrule]
+			(0,0) rectangle (\thesischeckboxsize,\thesischeckboxsize);
+	}%
+}
+% 对勾
+\newcommand{\checkbox}{%
+	\thesischeckboxnode{%
+		\draw[line width=\thesischeckrule, line cap=round, line join=round]
+			(0.18,0.42) -- (0.36,0.22) -- (0.72,0.68);
+	}%
+}
+% 勾选了对勾的方框
+\newcommand{\checkedbox}{%
+	\thesischeckboxnode{%
+		\draw[line width=\thesischeckboxrule]
+			(0,0) rectangle (\thesischeckboxsize,\thesischeckboxsize);
+		\draw[line width=\thesischeckrule, line cap=round, line join=round]
+			(0.18,0.42) -- (0.36,0.22) -- (0.72,0.68);
+	}%
+}
+
+\newsavebox{\thesisdegreetyperefbox}
+\newsavebox{\thesisdegreetypemarkbox}
+\newlength{\thesisdegreetypeshift}
+\newcommand{\degreetypealignedmark}[1]{%
+	\sbox{\thesisdegreetyperefbox}{{\fangsong\zihao{3}学}}%
+	\sbox{\thesisdegreetypemarkbox}{{#1}}%
+	\setlength{\thesisdegreetypeshift}{%
+		\dimexpr(\ht\thesisdegreetyperefbox-\dp\thesisdegreetyperefbox-\ht\thesisdegreetypemarkbox+\dp\thesisdegreetypemarkbox)/2\relax
+	}%
+	\raisebox{\thesisdegreetypeshift}{\usebox{\thesisdegreetypemarkbox}}%
+}
+
+% 学位类型 View
+\newcommand{\degreetype}{
+	\ifthenelse{\equal{\isacademicdegree}{true}}
+	{
+		{\fangsong\zihao{3} \degreetypealignedmark{\checkedbox} 学术学位\hspace{2em} \zihao{3} \degreetypealignedmark{\Box} 专业学位}
+	}
+	{
+		{\fangsong\zihao{3} \degreetypealignedmark{\Box} 学术学位\hspace{2em} \zihao{3} \degreetypealignedmark{\checkedbox} 专业学位}
+	}
+}
+
+\ExplSyntaxOn
+\seq_new:N \l__thesis_keyword_items_seq
+\seq_new:N \l__thesis_keyword_clean_seq
+\seq_new:N \l__thesis_keyword_output_seq
+\tl_new:N \l__thesis_keyword_input_tl
+\tl_new:N \l__thesis_keyword_item_tl
+
+\cs_new_protected:Npn \thesis_keywords_collect:n #1
+{
+	\tl_set:Nx \l__thesis_keyword_input_tl {#1}
+	\regex_replace_all:nnN {\s*，\s*} {,} \l__thesis_keyword_input_tl
+	\regex_replace_all:nnN {\s*,\s*} {,} \l__thesis_keyword_input_tl
+	\tl_trim_spaces:N \l__thesis_keyword_input_tl
+	\seq_set_split:NnV \l__thesis_keyword_items_seq {,} \l__thesis_keyword_input_tl
+	\seq_clear:N \l__thesis_keyword_clean_seq
+	\seq_map_inline:Nn \l__thesis_keyword_items_seq {
+		\tl_set:Nn \l__thesis_keyword_item_tl {##1}
+		\tl_trim_spaces:N \l__thesis_keyword_item_tl
+		\tl_if_blank:VF \l__thesis_keyword_item_tl {
+			\seq_put_right:NV \l__thesis_keyword_clean_seq \l__thesis_keyword_item_tl
+		}
+	}
+}
+
+\cs_new_protected:Npn \thesis_format_zh_keywords:n #1
+{
+	\thesis_keywords_collect:n {#1}
+	\seq_use:Nn \l__thesis_keyword_clean_seq {，}
+}
+
+\cs_new_protected:Npn \thesis_format_en_keywords:n #1
+{
+	\thesis_keywords_collect:n {#1}
+	\seq_clear:N \l__thesis_keyword_output_seq
+	\seq_map_inline:Nn \l__thesis_keyword_clean_seq {
+		\tl_set:Nn \l__thesis_keyword_item_tl {##1}
+		\tl_set:Nx \l__thesis_keyword_item_tl
+			{
+				\tl_upper_case:n { \tl_head:V \l__thesis_keyword_item_tl }
+				\tl_tail:V \l__thesis_keyword_item_tl
+			}
+		\seq_put_right:NV \l__thesis_keyword_output_seq \l__thesis_keyword_item_tl
+	}
+	\seq_use:Nn \l__thesis_keyword_output_seq {,\space}
+}
+
+\NewDocumentCommand{\FormatZhKeywords}{m}{\thesis_format_zh_keywords:n{#1}}
+\NewDocumentCommand{\FormatEnKeywords}{m}{\thesis_format_en_keywords:n{#1}}
+\ExplSyntaxOff
+
+% 论文信息配置
+\pkuthssinfo{
+	cthesisname = {硕士学位论文},
+	thesiscover = {硕士研究生学位论文},
+	ethesisname = {Master Dissertation},
+	ctitle = {\zhtitle},
+	etitle = {\entitle},
+	cauthor = {\zhauthor}, eauthor = {\enauthor},
+	studentid = {\thestudentid},
+	date = {\zhdigits{\theyear}\ \ 年\ \ \zhnumber{\themonth}\ \ 月},
+	school = {汇丰商学院},
+	cmajor = {\zhmajor}, emajor = {\enmajor},
+	direction = {\majordirection},
+	cmentor = {\zhmentor}, ementor = {\enmentor},
+	ckeywords = {\FormatZhKeywords{\zhkeywords}},
+	ekeywords = {\FormatEnKeywords{\enkeywords}},
+}

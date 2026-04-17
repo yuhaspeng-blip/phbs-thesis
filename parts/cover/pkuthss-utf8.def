@@ -55,7 +55,7 @@
 \def\cuniversity{北京大学}
 \def\euniversity{Peking University}
 \def\cthesisname{硕士学位论文}
-\def\ethesisname{Master Thesis}
+\def\ethesisname{Master Dissertation}
 \def\thesiscover{硕士研究生学位论文}
 \def\cabstractname{摘要}
 \def\eabstractname{ABSTRACT}

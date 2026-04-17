@@ -1,6 +1,8 @@
 % ============================================================
 % PHBS 硕士学位论文配置文件
 % ============================================================
+% public 模板的唯一 metadata 源是根 configs.tex；
+% parts/*/configs.tex 只作为同步出来的镜像，不单独维护。
 %
 % 阶段说明 (修改下方 \stage 的值):
 %   blind   - 盲审版: 隐藏学生姓名、学号、导师信息，无致谢
@@ -19,14 +21,32 @@
 % ============================================================
 % 可选值: blind / defense / final
 \newcommand{\stage}{final}
+% 构建系统会在工作目录里自动生成 stage.auto.tex 覆盖阶段值；
+% 用户手工直接编译某个分册时，则回退到上面的默认值。
+\IfFileExists{stage.auto.tex}{\input{stage.auto.tex}}{}
+
+% ============================================================
+% 【重要】版式与参考文献模式
+% ============================================================
+% 字体配置:
+%   strict_pku - 交稿模式，优先使用 Windows 宋体系字体
+%   portable   - 兼容模式，允许后备字体链
+\newcommand{\fontprofile}{strict_pku}
+
+% 参考文献体例:
+%   author_year - 著者-出版年制（默认）
+%   numeric     - 顺序编码制
+% 具体 biblatex style 由 parts/en|zh/main.tex 绑定为 gb7714-2015/gb7714-2015ay；
+% PHBS 附件 1 不强制 bibliography style，若未来有明确要求，可只切换该绑定。
+\newcommand{\bibmode}{author_year}
 
 % ============================================================
 % 论文标题
 % ============================================================
 % 中文标题 (使用 \zhquote{} 输入中文引号)
 \newcommand{\zhtitle}{\zhquote{摸鱼}的经济学原理——信息不对称下的最优偷懒策略}
-% 英文标题 (使用 \enquote{} 输入英文引号)
-\newcommand{\entitle}{The Economics of \enquote{Idleness} - Optimal Laziness under Asymmetric Information}
+% 英文标题 (使用 \titleenquote{} 输入标题中的英文引号)
+\newcommand{\entitle}{The Economics of \titleenquote{Idleness} - Optimal Laziness under Asymmetric Information}
 % 标题行数 (用于封面排版，根据标题长度调整)
 \newcommand{\titlelines}{3}
 
@@ -63,8 +83,10 @@
 % ============================================================
 % 关键词
 % ============================================================
-\newcommand{\zhkeywords}{信息不对称，偷懒，激励，博弈论}
-\newcommand{\enkeywords}{Asymmetric Information, Laziness, Incentive, Game Theory}
+% 中文关键词可用中文或英文逗号分隔，模板会统一转成中文逗号
+\newcommand{\zhkeywords}{信息不对称, 偷懒, 激励, 博弈论}
+% 英文关键词可用中文或英文逗号分隔，模板会统一转成半角逗号并让每个关键词首字母大写
+\newcommand{\enkeywords}{Asymmetric information, Laziness, Incentive, Game theory}
 
 % ============================================================
 % 日期

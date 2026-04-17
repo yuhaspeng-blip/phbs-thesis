@@ -2,14 +2,16 @@
 # PHBS 硕士学位论文 LaTeX 模板 - Makefile
 # ============================================================
 #
-# 一键编译三个版本:
-#   make          - 编译盲审版、答辩版、最终版，全部输出到 output/
+# 用户入口保持不变:
+#   make blind
+#   make defense
+#   make final
+#   make / make all
 #
-# 输出文件:
-#   output/
-#     blind/thesis.pdf     - 盲审版 (隐藏学生、导师，无致谢)
-#     defense/thesis.pdf   - 答辩版 (显示学生，隐藏导师，无致谢)
-#     final/thesis.pdf     - 最终版 (完整版)
+# 内部规则:
+#   - blind / defense / final 单独调用时，总是重新编译该阶段
+#   - all 只在当前调用内部复用唯一分册变体
+#   - stage 通过工作目录里的 stage.auto.tex 自动传递，不改写 configs.tex
 #
 # ============================================================
 
@@ -21,6 +23,15 @@ ZH_DIR := $(PARTS_DIR)/zh
 SHARED_DIR := shared
 PDF_DIR := pdf
 OUTPUT_DIR := output
+BUILD_DIR := $(OUTPUT_DIR)/.build
+ALL_BUILD_DIR := $(BUILD_DIR)/all
+SINGLE_BUILD_DIR := $(BUILD_DIR)/single
+PREVIEW_BUILD_DIR := $(BUILD_DIR)/preview
+
+COPYRIGHT_PDF ?= $(PDF_DIR)/copyright.pdf
+ORIGINALITY_PDF ?= $(PDF_DIR)/originauth.pdf
+COMMITMENT_PDF ?= $(PDF_DIR)/commitment.pdf
+BACK_COVER_PDF ?= $(PDF_DIR)/back-cover.pdf
 
 # 编译工具配置
 XELATEX := xelatex
@@ -30,17 +41,147 @@ BIBER := biber
 # latexmk 配置 (用于 watch 模式)
 LATEXMK := latexmk
 LATEXMK_FLAGS := -xelatex -synctex=1 -interaction=nonstopmode -file-line-error
+POWERSHELL := powershell -NoProfile -ExecutionPolicy Bypass -Command
+PYTHON := python
 
-# 需要同步到各 parts 的文件
-SHARED_FILES := pkuthss.cls pkuthss-utf8.def miscs.tex
+# authored shared source；parts/* 与 output/.build 里看到的同名文件都视为镜像
+SHARED_FILES := pkuthss.cls pkuthss-utf8.def miscs.tex template_text_utils.tex template_layout_policy.tex template_stage_policy.tex
 SHARED_DIRS := img
 
+ALL_VARIANT_PDFS := \
+	$(ALL_BUILD_DIR)/cover-blind/main.pdf \
+	$(ALL_BUILD_DIR)/cover-defense/main.pdf \
+	$(ALL_BUILD_DIR)/cover-final/main.pdf \
+	$(ALL_BUILD_DIR)/en-blind/main.pdf \
+	$(ALL_BUILD_DIR)/en-defense/main.pdf \
+	$(ALL_BUILD_DIR)/en-final/main.pdf \
+	$(ALL_BUILD_DIR)/zh-nonfinal/main.pdf \
+	$(ALL_BUILD_DIR)/zh-final/main.pdf
+
+.PHONY: all blind defense final cover en zh watch-zh watch-en clean cleanall zip help check-official-assets sync-public-mirrors sync-preview-parts FORCE
+
+FORCE:
+
+stage_for_zh = $(if $(filter final,$1),final,defense)
+
+define prepare_part_workdir
+	@rm -rf "$(1)"
+	@mkdir -p "$(1)"
+	@cp -Rf "$(2)/." "$(1)/"
+	@cp -f "configs.tex" "$(1)/configs.tex"
+	@for f in $(SHARED_FILES); do \
+		cp -f "$(SHARED_DIR)/$$f" "$(1)/"; \
+	done
+	@for d in $(SHARED_DIRS); do \
+		cp -Rf "$(SHARED_DIR)/$$d" "$(1)/"; \
+	done
+	@printf '%s\n' '\\renewcommand{\\stage}{$(3)}' > "$(1)/stage.auto.tex"
+endef
+
+define compile_cover_pdf
+	@cd "$(1)" && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
+	@cd "$(1)" && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
+endef
+
+define compile_body_pdf
+	@cd "$(1)" && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
+	@cd "$(1)" && $(BIBER) main >/dev/null 2>&1
+	@cd "$(1)" && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
+	@cd "$(1)" && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
+endef
+
+define assemble_stage
+	@rm -rf "$(OUTPUT_DIR)/$(1)"
+	@mkdir -p "$(OUTPUT_DIR)/$(1)"
+	@cp -f "$(2)" "$(OUTPUT_DIR)/$(1)/01-cover.pdf"
+	@if [ "$(1)" = "final" ]; then \
+		$(POWERSHELL) "Copy-Item -LiteralPath '$(COPYRIGHT_PDF)' -Destination '$(OUTPUT_DIR)/$(1)/02-copyright.pdf' -Force"; \
+		cp -f "$(3)" "$(OUTPUT_DIR)/$(1)/03-en.pdf"; \
+		cp -f "$(4)" "$(OUTPUT_DIR)/$(1)/04-zh.pdf"; \
+		$(POWERSHELL) "Copy-Item -LiteralPath '$(COMMITMENT_PDF)' -Destination '$(OUTPUT_DIR)/$(1)/05-commitment.pdf' -Force"; \
+		$(POWERSHELL) "Copy-Item -LiteralPath '$(ORIGINALITY_PDF)' -Destination '$(OUTPUT_DIR)/$(1)/06-originauth.pdf' -Force"; \
+		$(POWERSHELL) "Copy-Item -LiteralPath '$(BACK_COVER_PDF)' -Destination '$(OUTPUT_DIR)/$(1)/07-back-cover.pdf' -Force"; \
+		$(PYTHON) scripts/merge_pdfs.py --stage $(1) \
+			$(OUTPUT_DIR)/$(1)/thesis.pdf \
+			$(OUTPUT_DIR)/$(1)/01-cover.pdf \
+			$(OUTPUT_DIR)/$(1)/02-copyright.pdf \
+			$(OUTPUT_DIR)/$(1)/03-en.pdf \
+			$(OUTPUT_DIR)/$(1)/04-zh.pdf \
+			$(OUTPUT_DIR)/$(1)/05-commitment.pdf \
+			$(OUTPUT_DIR)/$(1)/06-originauth.pdf \
+			$(OUTPUT_DIR)/$(1)/07-back-cover.pdf; \
+	else \
+		cp -f "$(3)" "$(OUTPUT_DIR)/$(1)/02-en.pdf"; \
+		cp -f "$(4)" "$(OUTPUT_DIR)/$(1)/03-zh.pdf"; \
+		$(PYTHON) scripts/merge_pdfs.py --stage $(1) \
+			$(OUTPUT_DIR)/$(1)/thesis.pdf \
+			$(OUTPUT_DIR)/$(1)/01-cover.pdf \
+			$(OUTPUT_DIR)/$(1)/02-en.pdf \
+			$(OUTPUT_DIR)/$(1)/03-zh.pdf; \
+	fi
+endef
+
 # ============================================================
-# 默认目标: 编译所有三个版本
+# 自动工作目录编译规则
 # ============================================================
 
-.PHONY: all
-all: blind defense final
+$(ALL_BUILD_DIR)/cover-%/main.pdf: FORCE
+	@echo "  [all] 编译封面变体 $*..."
+	$(call prepare_part_workdir,$(@D),$(COVER_DIR),$*)
+	$(call compile_cover_pdf,$(@D))
+
+$(ALL_BUILD_DIR)/en-%/main.pdf: FORCE
+	@echo "  [all] 编译英文分册 $*..."
+	$(call prepare_part_workdir,$(@D),$(EN_DIR),$*)
+	$(call compile_body_pdf,$(@D))
+
+$(ALL_BUILD_DIR)/zh-%/main.pdf: FORCE
+	@echo "  [all] 编译中文分册 $*..."
+	$(call prepare_part_workdir,$(@D),$(ZH_DIR),$(call stage_for_zh,$*))
+	$(call compile_body_pdf,$(@D))
+
+$(SINGLE_BUILD_DIR)/%/cover/main.pdf: FORCE
+	@echo "  [single] 编译封面分册 $*..."
+	$(call prepare_part_workdir,$(@D),$(COVER_DIR),$*)
+	$(call compile_cover_pdf,$(@D))
+
+$(SINGLE_BUILD_DIR)/%/en/main.pdf: FORCE
+	@echo "  [single] 编译英文分册 $*..."
+	$(call prepare_part_workdir,$(@D),$(EN_DIR),$*)
+	$(call compile_body_pdf,$(@D))
+
+$(SINGLE_BUILD_DIR)/%/zh/main.pdf: FORCE
+	@echo "  [single] 编译中文分册 $*..."
+	$(call prepare_part_workdir,$(@D),$(ZH_DIR),$(call stage_for_zh,$*))
+	$(call compile_body_pdf,$(@D))
+
+$(PREVIEW_BUILD_DIR)/cover-final/main.pdf: FORCE
+	@echo "  [preview] 编译封面..."
+	$(call prepare_part_workdir,$(@D),$(COVER_DIR),final)
+	$(call compile_cover_pdf,$(@D))
+
+$(PREVIEW_BUILD_DIR)/en-final/main.pdf: FORCE
+	@echo "  [preview] 编译英文分册..."
+	$(call prepare_part_workdir,$(@D),$(EN_DIR),final)
+	$(call compile_body_pdf,$(@D))
+
+$(PREVIEW_BUILD_DIR)/zh-final/main.pdf: FORCE
+	@echo "  [preview] 编译中文分册..."
+	$(call prepare_part_workdir,$(@D),$(ZH_DIR),final)
+	$(call compile_body_pdf,$(@D))
+
+# ============================================================
+# 默认目标: 编译所有三个版本（仅本次调用内部复用）
+# ============================================================
+
+all: check-official-assets $(ALL_VARIANT_PDFS)
+	@echo ""
+	@echo "============================================================"
+	@echo "  组装全部阶段成品"
+	@echo "============================================================"
+	$(call assemble_stage,blind,$(ALL_BUILD_DIR)/cover-blind/main.pdf,$(ALL_BUILD_DIR)/en-blind/main.pdf,$(ALL_BUILD_DIR)/zh-nonfinal/main.pdf)
+	$(call assemble_stage,defense,$(ALL_BUILD_DIR)/cover-defense/main.pdf,$(ALL_BUILD_DIR)/en-defense/main.pdf,$(ALL_BUILD_DIR)/zh-nonfinal/main.pdf)
+	$(call assemble_stage,final,$(ALL_BUILD_DIR)/cover-final/main.pdf,$(ALL_BUILD_DIR)/en-final/main.pdf,$(ALL_BUILD_DIR)/zh-final/main.pdf)
 	@echo ""
 	@echo "============================================================"
 	@echo "  全部编译完成!"
@@ -48,163 +189,101 @@ all: blind defense final
 	@echo ""
 	@echo "  输出文件:"
 	@echo "    $(OUTPUT_DIR)/blind/thesis.pdf    <- 盲审版 (送审用)"
-	@echo "    $(OUTPUT_DIR)/defense/thesis.pdf  <- 答辩版 (答辩用)"  
+	@echo "    $(OUTPUT_DIR)/defense/thesis.pdf  <- 答辩版 (答辩用)"
 	@echo "    $(OUTPUT_DIR)/final/thesis.pdf    <- 最终版 (存档用)"
 	@echo ""
 
 # ============================================================
-# 三个阶段的编译目标
+# 三个阶段的编译目标（单独调用时总是重编）
 # ============================================================
 
-.PHONY: blind
-blind:
+blind: $(SINGLE_BUILD_DIR)/blind/cover/main.pdf $(SINGLE_BUILD_DIR)/blind/en/main.pdf $(SINGLE_BUILD_DIR)/blind/zh/main.pdf
 	@echo ""
 	@echo "============================================================"
-	@echo "  编译盲审版 (blind)"
+	@echo "  组装盲审版 (blind)"
 	@echo "  - 隐藏: 学生姓名、学号、导师信息"
 	@echo "  - 不含: 致谢、原创性声明"
 	@echo "============================================================"
-	@$(MAKE) build-stage STAGE=blind OUTPUT_SUBDIR=blind
+	$(call assemble_stage,blind,$(SINGLE_BUILD_DIR)/blind/cover/main.pdf,$(SINGLE_BUILD_DIR)/blind/en/main.pdf,$(SINGLE_BUILD_DIR)/blind/zh/main.pdf)
+	@echo "  -> $(OUTPUT_DIR)/blind/thesis.pdf"
 
-.PHONY: defense
-defense:
+defense: $(SINGLE_BUILD_DIR)/defense/cover/main.pdf $(SINGLE_BUILD_DIR)/defense/en/main.pdf $(SINGLE_BUILD_DIR)/defense/zh/main.pdf
 	@echo ""
 	@echo "============================================================"
-	@echo "  编译答辩版 (defense)"
+	@echo "  组装答辩版 (defense)"
 	@echo "  - 显示: 学生姓名、学号"
 	@echo "  - 隐藏: 导师信息"
 	@echo "  - 不含: 致谢、原创性声明"
 	@echo "============================================================"
-	@$(MAKE) build-stage STAGE=defense OUTPUT_SUBDIR=defense
+	$(call assemble_stage,defense,$(SINGLE_BUILD_DIR)/defense/cover/main.pdf,$(SINGLE_BUILD_DIR)/defense/en/main.pdf,$(SINGLE_BUILD_DIR)/defense/zh/main.pdf)
+	@echo "  -> $(OUTPUT_DIR)/defense/thesis.pdf"
 
-.PHONY: final
-final:
+final: check-official-assets $(SINGLE_BUILD_DIR)/final/cover/main.pdf $(SINGLE_BUILD_DIR)/final/en/main.pdf $(SINGLE_BUILD_DIR)/final/zh/main.pdf
 	@echo ""
 	@echo "============================================================"
-	@echo "  编译最终版 (final)"
+	@echo "  组装最终版 (final)"
 	@echo "  - 显示: 所有信息"
-	@echo "  - 包含: 致谢、原创性声明"
+	@echo "  - 包含: 致谢、版权页、承诺书、原创性声明、封底"
 	@echo "============================================================"
-	@$(MAKE) build-stage STAGE=final OUTPUT_SUBDIR=final
+	$(call assemble_stage,final,$(SINGLE_BUILD_DIR)/final/cover/main.pdf,$(SINGLE_BUILD_DIR)/final/en/main.pdf,$(SINGLE_BUILD_DIR)/final/zh/main.pdf)
+	@echo "  -> $(OUTPUT_DIR)/final/thesis.pdf"
 
 # ============================================================
-# 编译单个阶段 (内部使用)
+# 官方页检查
 # ============================================================
 
-.PHONY: build-stage
-build-stage: set-stage sync-all build-all-parts combine-stage
-	@echo "  -> $(OUTPUT_DIR)/$(OUTPUT_SUBDIR)/thesis.pdf"
-
-.PHONY: set-stage
-set-stage:
-	@sed -i.bak 's/\\newcommand{\\stage}{[^}]*}/\\newcommand{\\stage}{$(STAGE)}/' configs.tex
-	@rm -f configs.tex.bak
-
-.PHONY: sync-all
-sync-all:
-	@echo "  [1/6] 同步资源..."
-	@cp -f configs.tex $(COVER_DIR)/
-	@cp -f configs.tex $(EN_DIR)/
-	@cp -f configs.tex $(ZH_DIR)/
-	@for f in $(SHARED_FILES); do \
-		cp -f $(SHARED_DIR)/$$f $(COVER_DIR)/; \
-		cp -f $(SHARED_DIR)/$$f $(EN_DIR)/; \
-		cp -f $(SHARED_DIR)/$$f $(ZH_DIR)/; \
-	done
-	@for d in $(SHARED_DIRS); do \
-		cp -rf $(SHARED_DIR)/$$d $(COVER_DIR)/; \
-		cp -rf $(SHARED_DIR)/$$d $(EN_DIR)/; \
-		cp -rf $(SHARED_DIR)/$$d $(ZH_DIR)/; \
-	done
-	@cp -f $(PDF_DIR)/版权声明.pdf $(COVER_DIR)/ 2>/dev/null || true
-	@cp -f $(PDF_DIR)/原创性声明.pdf $(ZH_DIR)/ 2>/dev/null || true
-
-.PHONY: build-all-parts
-build-all-parts:
-	@echo "  [2/6] 编译封面 (第1次)..."
-	@cd $(COVER_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@echo "  [3/6] 编译英文版 (第1次 + biber + 第2次)..."
-	@cd $(EN_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(EN_DIR) && $(BIBER) main >/dev/null 2>&1
-	@cd $(EN_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(EN_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@echo "  [4/6] 编译中文版 (第1次 + biber + 第2次)..."
-	@cd $(ZH_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(ZH_DIR) && $(BIBER) main >/dev/null 2>&1
-	@cd $(ZH_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(ZH_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@echo "  [5/6] 编译封面 (第2次)..."
-	@cd $(COVER_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-
-.PHONY: combine-stage
-combine-stage:
-	@echo "  [6/6] 合并 PDF..."
-	@mkdir -p $(OUTPUT_DIR)/$(OUTPUT_SUBDIR)
-	@cp $(COVER_DIR)/main.pdf $(OUTPUT_DIR)/$(OUTPUT_SUBDIR)/01-cover.pdf
-	@cp $(EN_DIR)/main.pdf $(OUTPUT_DIR)/$(OUTPUT_SUBDIR)/02-en.pdf
-	@cp $(ZH_DIR)/main.pdf $(OUTPUT_DIR)/$(OUTPUT_SUBDIR)/03-zh.pdf
-	@if command -v pdfunite >/dev/null 2>&1; then \
-		pdfunite \
-			$(OUTPUT_DIR)/$(OUTPUT_SUBDIR)/01-cover.pdf \
-			$(OUTPUT_DIR)/$(OUTPUT_SUBDIR)/02-en.pdf \
-			$(OUTPUT_DIR)/$(OUTPUT_SUBDIR)/03-zh.pdf \
-			$(OUTPUT_DIR)/$(OUTPUT_SUBDIR)/thesis.pdf; \
-	else \
-		echo "  警告: pdfunite 未安装，无法合并 PDF"; \
-		echo "  安装: brew install poppler (macOS)"; \
-	fi
+check-official-assets:
+	@$(POWERSHELL) "if (-not (Test-Path -LiteralPath '$(COPYRIGHT_PDF)')) { Write-Host '错误: 缺少官方版权声明 PDF：$(COPYRIGHT_PDF)'; exit 1 }"
+	@$(POWERSHELL) "if (-not (Test-Path -LiteralPath '$(COMMITMENT_PDF)')) { Write-Host '错误: 缺少终版学位论文承诺书 PDF：$(COMMITMENT_PDF)'; exit 1 }"
+	@$(POWERSHELL) "if (-not (Test-Path -LiteralPath '$(ORIGINALITY_PDF)')) { Write-Host '错误: 缺少原创性声明和授权使用说明 PDF：$(ORIGINALITY_PDF)'; exit 1 }"
+	@$(POWERSHELL) "if (-not (Test-Path -LiteralPath '$(BACK_COVER_PDF)')) { Write-Host '错误: 缺少封底 PDF：$(BACK_COVER_PDF)'; exit 1 }"
 
 # ============================================================
 # 快捷命令 - 只编译某一部分 (调试用)
 # ============================================================
 
-.PHONY: cover
-cover:
-	@$(MAKE) sync-all STAGE=final
-	@echo "==> 编译封面 (xelatex x2)..."
-	@cd $(COVER_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(COVER_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
+cover: $(PREVIEW_BUILD_DIR)/cover-final/main.pdf
 	@mkdir -p $(OUTPUT_DIR)
-	@cp $(COVER_DIR)/main.pdf $(OUTPUT_DIR)/cover.pdf
+	@cp -f $(PREVIEW_BUILD_DIR)/cover-final/main.pdf $(OUTPUT_DIR)/cover.pdf
 	@echo "==> 完成: $(OUTPUT_DIR)/cover.pdf"
 
-.PHONY: en
-en:
-	@$(MAKE) sync-all STAGE=final
-	@echo "==> 编译英文版 (xelatex + biber + xelatex x2)..."
-	@cd $(EN_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(EN_DIR) && $(BIBER) main >/dev/null 2>&1
-	@cd $(EN_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(EN_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
+en: $(PREVIEW_BUILD_DIR)/en-final/main.pdf
 	@mkdir -p $(OUTPUT_DIR)
-	@cp $(EN_DIR)/main.pdf $(OUTPUT_DIR)/en.pdf
+	@cp -f $(PREVIEW_BUILD_DIR)/en-final/main.pdf $(OUTPUT_DIR)/en.pdf
 	@echo "==> 完成: $(OUTPUT_DIR)/en.pdf"
 
-.PHONY: zh
-zh:
-	@$(MAKE) sync-all STAGE=final
-	@echo "==> 编译中文版 (xelatex + biber + xelatex x2)..."
-	@cd $(ZH_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(ZH_DIR) && $(BIBER) main >/dev/null 2>&1
-	@cd $(ZH_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
-	@cd $(ZH_DIR) && $(XELATEX) $(XELATEX_FLAGS) main.tex >/dev/null 2>&1
+zh: $(PREVIEW_BUILD_DIR)/zh-final/main.pdf
 	@mkdir -p $(OUTPUT_DIR)
-	@cp $(ZH_DIR)/main.pdf $(OUTPUT_DIR)/zh.pdf
+	@cp -f $(PREVIEW_BUILD_DIR)/zh-final/main.pdf $(OUTPUT_DIR)/zh.pdf
 	@echo "==> 完成: $(OUTPUT_DIR)/zh.pdf"
 
 # ============================================================
 # 监视模式 - 写作时自动编译
 # ============================================================
 
-.PHONY: watch-zh
-watch-zh:
-	@$(MAKE) sync-all STAGE=final
+sync-public-mirrors:
+	@echo "==> 同步 public authored source 到 parts 镜像..."
+	@for dir in $(COVER_DIR) $(EN_DIR) $(ZH_DIR); do \
+		cp -f configs.tex "$$dir/configs.tex"; \
+		for f in $(SHARED_FILES); do \
+			cp -f "$(SHARED_DIR)/$$f" "$$dir/"; \
+		done; \
+		for d in $(SHARED_DIRS); do \
+			cp -Rf "$(SHARED_DIR)/$$d" "$$dir/"; \
+		done; \
+	done
+
+sync-preview-parts: sync-public-mirrors
+	@echo "==> 写入 final 预览阶段到 parts 镜像..."
+	@for dir in $(COVER_DIR) $(EN_DIR) $(ZH_DIR); do \
+		printf '%s\n' '\\renewcommand{\\stage}{final}' > "$$dir/stage.auto.tex"; \
+	done
+
+watch-zh: sync-preview-parts
 	@echo "==> 监视中文版，自动编译 (Ctrl+C 退出)..."
 	@cd $(ZH_DIR) && $(LATEXMK) -pvc $(LATEXMK_FLAGS) main.tex
 
-.PHONY: watch-en
-watch-en:
-	@$(MAKE) sync-all STAGE=final
+watch-en: sync-preview-parts
 	@echo "==> 监视英文版，自动编译 (Ctrl+C 退出)..."
 	@cd $(EN_DIR) && $(LATEXMK) -pvc $(LATEXMK_FLAGS) main.tex
 
@@ -212,35 +291,35 @@ watch-en:
 # 清理
 # ============================================================
 
-.PHONY: clean
 clean:
 	@echo "==> 清理编译缓存..."
 	@cd $(COVER_DIR) && $(LATEXMK) -c 2>/dev/null || true
 	@cd $(EN_DIR) && $(LATEXMK) -c 2>/dev/null || true
 	@cd $(ZH_DIR) && $(LATEXMK) -c 2>/dev/null || true
+	@rm -rf $(BUILD_DIR)
 	@echo "    完成"
 
-.PHONY: cleanall
 cleanall: clean
 	@echo "==> 清理所有生成文件..."
 	@cd $(COVER_DIR) && $(LATEXMK) -C 2>/dev/null || true
 	@cd $(EN_DIR) && $(LATEXMK) -C 2>/dev/null || true
 	@cd $(ZH_DIR) && $(LATEXMK) -C 2>/dev/null || true
 	@rm -rf $(OUTPUT_DIR)
-	@# 清理同步的文件
 	@rm -f $(COVER_DIR)/configs.tex $(EN_DIR)/configs.tex $(ZH_DIR)/configs.tex
+	@rm -f $(COVER_DIR)/stage.auto.tex $(EN_DIR)/stage.auto.tex $(ZH_DIR)/stage.auto.tex
 	@rm -f $(COVER_DIR)/miscs.tex $(EN_DIR)/miscs.tex $(ZH_DIR)/miscs.tex
+	@rm -f $(COVER_DIR)/template_text_utils.tex $(EN_DIR)/template_text_utils.tex $(ZH_DIR)/template_text_utils.tex
+	@rm -f $(COVER_DIR)/template_layout_policy.tex $(EN_DIR)/template_layout_policy.tex $(ZH_DIR)/template_layout_policy.tex
+	@rm -f $(COVER_DIR)/template_stage_policy.tex $(EN_DIR)/template_stage_policy.tex $(ZH_DIR)/template_stage_policy.tex
 	@rm -f $(COVER_DIR)/pkuthss.cls $(EN_DIR)/pkuthss.cls $(ZH_DIR)/pkuthss.cls
 	@rm -f $(COVER_DIR)/pkuthss-utf8.def $(EN_DIR)/pkuthss-utf8.def $(ZH_DIR)/pkuthss-utf8.def
 	@rm -rf $(COVER_DIR)/img $(EN_DIR)/img $(ZH_DIR)/img
-	@rm -f $(COVER_DIR)/版权声明.pdf $(ZH_DIR)/原创性声明.pdf
 	@echo "    完成"
 
 # ============================================================
 # 打包
 # ============================================================
 
-.PHONY: zip
 zip: cleanall
 	@echo "==> 打包项目..."
 	@zip -r thesis-template.zip . \
@@ -254,7 +333,6 @@ zip: cleanall
 # 帮助
 # ============================================================
 
-.PHONY: help
 help:
 	@echo ""
 	@echo "PHBS 硕士学位论文 LaTeX 模板"
@@ -262,20 +340,32 @@ help:
 	@echo ""
 	@echo "快速开始:"
 	@echo "  1. 编辑 configs.tex 填写你的论文信息"
-	@echo "  2. 把签字的 PDF 放到 pdf/ 目录"
+	@echo "  2. 把官方 PDF 放到 pdf/ 目录"
 	@echo "  3. 在 parts/zh/chap/ 和 parts/en/chap/ 写论文"
-	@echo "  4. 运行 make 编译所有版本"
+	@echo "  4. 运行 make all 编译三个版本"
+	@echo ""
+	@echo "官方页默认文件名:"
+	@echo "  $(COPYRIGHT_PDF)"
+	@echo "  $(COMMITMENT_PDF)"
+	@echo "  $(ORIGINALITY_PDF)"
+	@echo "  $(BACK_COVER_PDF)"
 	@echo ""
 	@echo "常用命令:"
 	@echo "  make          一键编译三个版本 (盲审/答辩/最终)"
-	@echo "  make blind    只编译盲审版"
-	@echo "  make defense  只编译答辩版"
-	@echo "  make final    只编译最终版"
+	@echo "  make blind    只编译盲审版 (每次重新编译)"
+	@echo "  make defense  只编译答辩版 (每次重新编译)"
+	@echo "  make final    只编译最终版 (每次重新编译)"
 	@echo ""
 	@echo "写作时:"
 	@echo "  make zh       只编译中文版 (快速预览)"
 	@echo "  make en       只编译英文版"
 	@echo "  make watch-zh 监视模式，保存时自动编译"
+	@echo "  make sync-public-mirrors 同步 public authored source 到 parts 镜像"
+	@echo ""
+	@echo "说明:"
+	@echo "  - blind / defense / final 单独调用时，总是重新编译"
+	@echo "  - make all 只在当前调用内部复用唯一分册变体"
+	@echo "  - configs.tex 中的默认 \\stage 只作为手工单独编译时的后备值"
 	@echo ""
 	@echo "其他:"
 	@echo "  make clean    清理编译缓存"

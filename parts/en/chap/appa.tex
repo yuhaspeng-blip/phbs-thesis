@@ -1,0 +1,31 @@
+\chapter{Variable Definitions and Supplementary Notes}
+\label{chap:appa-variable-notes-en}
+
+\section{Definitions of Core Variables}
+\label{sec:appa-variable-definitions-en}
+
+This appendix summarizes the key variables used in the empirical chapters and provides a compact example of how appendix content can support the main text. Supplementary robustness results are reported in Appendix~\ref{chap:appb-robustness-tables-en}. Table~\ref{tab:appa-core-variables-en} lists the main variables, their operationalization, and their analytical purpose, while equation~\eqref{eq:appa-monitoring-index-en} illustrates a simple monitoring intensity index constructed from standardized components.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Illustrative Definitions of Core Variables}
+    \label{tab:appa-core-variables-en}
+    \begin{tabular}{p{3.3cm}p{4.1cm}p{5.5cm}}
+        \toprule
+        Variable & Measurement & Description \\
+        \midrule
+        shirking\_score & Survey index from 1 to 5 & Higher values indicate more frequent non-task activities during working hours. \\
+        monitor\_intensity & Standardized monitoring count & Combines spot checks, system traces, and supervisor reviews at the monthly level. \\
+        incentive\_pay & Share of performance pay & Measures the proportion of variable compensation in total income. \\
+        task\_complexity & Task complexity score & Captures task diversity, knowledge intensity, and cross-team coordination needs. \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+For smoke-test purposes, the appendix also contains a numbered equation:
+\begin{equation}
+    \label{eq:appa-monitoring-index-en}
+    M_i = \frac{1}{3}\left(z(\text{spotcheck}_i) + z(\text{logtrace}_i) + z(\text{managerreview}_i)\right).
+\end{equation}
+
+The main text may therefore refer readers to Table~\ref{tab:appa-core-variables-en} and equation~\eqref{eq:appa-monitoring-index-en} when describing the construction of the monitoring variable.

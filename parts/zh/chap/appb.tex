@@ -1,0 +1,26 @@
+\chapter{稳健性检验补充表}
+\label{chap:appb-robustness-tables}
+
+\section{替代设定与补充结果}
+\label{sec:appb-alternative-specifications}
+
+本附录用于演示在中文册中追加第二个附录时，目录、书签、章节编号和表格编号是否仍能保持稳定。相关变量定义与构造方式已在附录~\ref{chap:appa-variable-notes} 中说明。表~\ref{tab:appb-robustness} 给出三个示例性的稳健性检验设定，展示监督与激励变量在不同控制组下的方向是否保持一致。
+
+\begin{table}[htbp]
+    \centering
+    \caption{稳健性检验补充表示例}
+    \label{tab:appb-robustness}
+    \begin{tabular}{lccc}
+        \toprule
+        变量 & 设定一 & 设定二 & 设定三 \\
+        \midrule
+        monitor\_intensity & $-0.082^{**}$ & $-0.076^{**}$ & $-0.069^{*}$ \\
+        incentive\_pay & $-0.115^{***}$ & $-0.109^{***}$ & $-0.101^{**}$ \\
+        task\_complexity & $0.037$ & $0.042$ & $0.033$ \\
+        企业固定效应 & 是 & 是 & 是 \\
+        年份固定效应 & 是 & 是 & 是 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+从这个示例可以看到，即便控制变量和样本口径发生变化，监督强度与绩效激励的方向仍保持稳定。若正文需要引用补充回归，可直接指向附录表~\ref{tab:appb-robustness}。

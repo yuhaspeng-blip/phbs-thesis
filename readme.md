@@ -1,8 +1,8 @@
-# PHBS 硕士学位论文 LaTeX 模板 (2025)
+# PHBS 硕士学位论文 LaTeX 模板
 
 胖虎别墅的学弟学妹们，你们好！
 
-这是适配 **2025年北大汇丰商学院硕士毕业论文格式要求** 的 LaTeX 模板。本说明会手把手教你从零开始，完成整个论文的写作和提交。
+这是适配当前 **附件1《北大汇丰商学院毕业论文格式要求202602》** 的 LaTeX 模板。本说明会手把手教你从零开始，完成整个论文的写作和提交。
 
 **请认真阅读本说明，遇到问题先查阅本文档。**
 
@@ -285,9 +285,9 @@ my-thesis/
 │   ├── 版权声明.pdf         # 从门户下载
 │   └── 原创性声明.pdf       # 签字扫描版
 │
-├── shared/                  # 共享资源 (不要动!)
+├── shared/                  # 共享资源 (普通用户不要动)
 │   ├── pkuthss.cls          # 论文样式
-│   ├── miscs.tex            # 宏定义
+│   ├── miscs.tex            # 共享入口，聚合文本/版式/stage 策略
 │   └── img/                 # 校徽等图片
 │
 ├── output/                  # 编译输出 (自动生成)
@@ -297,9 +297,9 @@ my-thesis/
 │
 ├── Makefile                 # 编译脚本 (不用改)
 ├── .latexmkrc               # latexmk 配置 (不用改)
-├── readme.md                # 本说明文档
+├── readme.md                 # 本说明文档
 │
-└── 附件*/                   # 【必读】官方格式要求
+└── 附件*/                   # 【必读】官方格式要求与历史参考
 ```
 
 ### 哪些文件需要修改？
@@ -315,6 +315,21 @@ my-thesis/
 | `shared/*` | ❌ 不要动 | 模板核心文件 |
 | `parts/cover/*` | ❌ 不要动 | 封面自动生成 |
 | `Makefile` | ❌ 不要动 | 编译脚本 |
+
+补充说明：
+
+- 根 `configs.tex` 是 public 模板唯一维护的 metadata 源。
+- `parts/*/configs.tex` 与 `parts/*/miscs.tex` 等文件只作为镜像，用于 watch / preview 场景，不单独手改。
+- 如需刷新这些镜像，运行 `make sync-public-mirrors`。
+
+### 相对原始稿的主要变化
+
+- `configs.tex` 新增并固定了 `stage.auto`、`fontprofile`、`bibmode` 这几类模板合同，减少手工切换 root config 的需要。
+- `Makefile` 现在走 `workdir -> stage -> packet assemble` 的编译链，默认生成 blind / defense / final 三套成品包。
+- `shared/miscs.tex` 从单文件总控改成聚合入口，实际逻辑拆分到 `template_text_utils.tex`、`template_layout_policy.tex`、`template_stage_policy.tex`。
+- 参考文献当前默认体例切回 `gb7714-2015` / `gb7714-2015ay`；PHBS 附件 1 不强制 bibliography style，如未来有明确要求，可再切换。
+- 中文多音姓氏排序若异常，优先在对应 bib 条目里补 `key/sortkey`，而不是手改本机 `Pinyin.pm`。
+- `parts/*/configs.tex`、`parts/*/miscs.tex`、`parts/*/pkuthss.cls` 等文件现在都视为镜像，不再作为独立真相源维护。
 
 ---
 
@@ -367,6 +382,7 @@ make final        # 只编译最终版
 
 make zh           # 只编译中文版 (写作时快速预览)
 make en           # 只编译英文版
+make sync-public-mirrors  # 刷新 parts/* 下的 public 镜像
 make watch-zh     # 监视模式，保存时自动编译
 
 make clean        # 清理编译缓存
@@ -394,7 +410,7 @@ make help         # 查看帮助
 % ============================================================
 % 中文标题 (使用 \zhquote{} 输入中文引号)
 \newcommand{\zhtitle}{你的中文标题}
-% 英文标题 (使用 \enquote{} 输入英文引号)
+% 英文标题 (使用 \titleenquote{} 输入标题中的英文引号)
 \newcommand{\entitle}{Your English Title}
 % 标题行数 (用于封面排版，根据标题长度调整: 1/2/3)
 \newcommand{\titlelines}{2}
@@ -433,8 +449,11 @@ make help         # 查看帮助
 % ============================================================
 % 关键词
 % ============================================================
-\newcommand{\zhkeywords}{关键词1，关键词2，关键词3}
-\newcommand{\enkeywords}{Keyword1, Keyword2, Keyword3}
+% 中文关键词可用中文或英文逗号分隔，模板会统一转成中文逗号
+\newcommand{\zhkeywords}{关键词1, 关键词2, 关键词3}
+% 英文关键词可用中文或英文逗号分隔，模板会统一转成半角逗号，
+% 并让每个关键词首字母大写
+\newcommand{\enkeywords}{Asymmetric information, Laziness, Incentive, Game theory}
 
 % ============================================================
 % 日期
@@ -533,6 +552,35 @@ make watch-zh
 ---
 
 ## 参考文献管理
+
+### 当前模板默认体例
+
+- 当前 public 模板默认使用 `gb7714-2015` / `gb7714-2015ay`
+- 历史上模板曾使用 `gb7714-2005` / `gb7714-2005ay`，是为了贴近附件 2《北京大学研究生学位论文写作指南》
+- PHBS 附件 1《北大汇丰商学院毕业论文格式要求》并不强制 bibliography style，因此当前回到更通用的 2015 系默认
+- 若未来学院、项目或投稿目标要求其他体例，只需调整 `parts/en/main.tex` 与 `parts/zh/main.tex` 中的 `style=` 绑定
+
+### 中文拼音排序的多音姓氏提示
+
+- 当前中文参考文献默认使用 `sortlocale=zh__pinyin`
+- 大多数中文作者都能按拼音正常排序，但个别多音姓氏可能出现顺序异常
+- 若发现 `沈 / 曾 / 翟 / 仇` 这类姓氏没有按习惯音排序，优先检查对应 bib 条目，而不是先改本机 `Pinyin.pm`
+- 模板级标准修法是在受影响条目中补 `key`（或等价的 `sortkey`）指定习惯拼音
+
+示例：
+
+```bibtex
+@article{ShenExample2023,
+    author = {沈坤荣 and ...},
+    title = {...},
+    year = {2023},
+    key = {shen kunrong 2023},
+}
+```
+
+- 这类修复只作用于具体论文自己的 bibliography 数据
+- 模板本身只负责提供默认排序方案和排查提示
+- 因此以后任何从 public 重建出来的 private 都会继承这条说明，但是否需要补 `key/sortkey` 仍取决于该论文自己的 `.bib`
 
 ### 推荐工具：Zotero
 
@@ -676,6 +724,8 @@ make watch-zh
 
 由公式 \eqref{eq:utility} 可知...
 ```
+
+中文正文中 `\eqref{...}` 会显示为 `（3-1）`，英文正文中则保持 `(3-1)`。
 
 ### 公式录入工具
 
@@ -925,13 +975,15 @@ VS Code 中：点击右下角的编码 → 选择 `Save with Encoding` → `UTF-
 
 ## 必读附件
 
-项目目录中有三个附件，**请务必仔细阅读**：
+项目目录中有五个附件，**请务必仔细阅读**：
 
 | 附件 | 内容 | 重要程度 |
 |------|------|----------|
-| 附件1：北大汇丰商学院毕业论文格式要求202503.docx | 最新的格式要求 | ⭐⭐⭐⭐⭐ |
+| 附件1：北大汇丰商学院毕业论文格式要求202602.docx | 当前格式要求主依据 | ⭐⭐⭐⭐⭐ |
 | 附件2：北京大学研究生学位论文写作指南.pdf | 北大通用要求 | ⭐⭐⭐⭐ |
 | 附件3：原模板说明.pdf | 原模板使用技巧 | ⭐⭐⭐ |
+| 附件4：论文写作模版.doc | 历史 Word 模板参考 | ⭐⭐ |
+| 附件5：论文写作模版.pdf | 历史 PDF 模板参考 | ⭐⭐ |
 
 **特别注意**：
 - 格式要求可能每年更新，以附件1为准

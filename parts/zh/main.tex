@@ -1,32 +1,96 @@
 % ============================================================
-% 中文版论文 + 致谢 + 原创性声明
+% 中文版论文 + 致谢
 % ============================================================
 
 \documentclass[fontset=fandol,ugly,language=chinese]{pkuthss}
 
-\usepackage[backend=biber,style=gb7714-2015ay]{biblatex}
+\input{configs.tex}
+\providecommand{\bibmode}{author_year}
+% 参考文献样式合同：
+% 1. PHBS 附件 1 不强制 bibliography style；
+% 2. 模板曾使用 gb7714-2005/2005ay 以贴近附件 2《北京大学研究生学位论文写作指南》；
+% 3. 当前统一回到更通用的 gb7714-2015/2015ay，未来若项目另有要求，可只切换 style 名称。
+\ifthenelse{\equal{\bibmode}{numeric}}{%
+	\usepackage[backend=biber,style=gb7714-2015]{biblatex}
+}{%
+	\usepackage[backend=biber,style=gb7714-2015ay]{biblatex}
+}
 \usepackage{enumitem,fancyvrb}
-\usepackage{booktabs,multirow,longtable,makecell}
+\usepackage{booktabs,multirow,longtable,makecell,multicol}
 \RecustomVerbatimEnvironment{Verbatim}{Verbatim}{frame=single,tabsize=4,fontsize=\footnotesize}
 \renewcommand{\v}[1]{\boldsymbol{#1}}
 \newcommand\pkg[1]{\textsf{#1}}
 
-% 参考文献格式
-\setlength{\bibitemsep}{3bp}
-\renewcommand*{\bibfont}{\zihao{5}\linespread{1.27}\selectfont}
-
-% 加载配置
-\input{configs.tex}
 \input{miscs.tex}
 
 % 参考文献
 \addbibresource{ref.bib}
+% 中文参考文献默认按拼音排序。
+% 若个别作者姓氏顺序异常，优先怀疑多音姓氏（如：沈/曾/翟/仇）。
+% 模板级标准修法是在具体 bib 条目中补 key/sortkey 指定习惯拼音，
+% 例如：key = {shen kunrong 2023}。
+% 不把用户手工修改本机 Pinyin.pm 作为模板正式依赖。
+\ExecuteBibliographyOptions{sortlocale = zh__pinyin}
+\DeclareSourcemap{
+	\maps[datatype = bibtex]{
+		\map[overwrite]{
+			\step[fieldset = presort, fieldvalue = {b}]
+		}
+		\map[overwrite]{
+			\step[fieldsource = languageid, match = \regexp{^(zh|chinese)$}, final]
+			\step[fieldset = presort, fieldvalue = {a}]
+		}
+		\map[overwrite]{
+			\step[fieldsource = langid, match = \regexp{^(zh|chinese)$}, final]
+			\step[fieldset = presort, fieldvalue = {a}]
+		}
+		\map[overwrite]{
+			\step[fieldsource = languageid, match = \regexp{^(ja|japanese)$}, final]
+			\step[fieldset = presort, fieldvalue = {c}]
+		}
+		\map[overwrite]{
+			\step[fieldsource = langid, match = \regexp{^(ja|japanese)$}, final]
+			\step[fieldset = presort, fieldvalue = {c}]
+		}
+		\map[overwrite]{
+			\step[fieldsource = languageid, match = \regexp{^(ru|russian)$}, final]
+			\step[fieldset = presort, fieldvalue = {d}]
+		}
+		\map[overwrite]{
+			\step[fieldsource = langid, match = \regexp{^(ru|russian)$}, final]
+			\step[fieldset = presort, fieldvalue = {d}]
+		}
+	}
+}
+
+\renewrobustcmd{\mkbibleftborder}{\allowbreak（}
+\renewrobustcmd{\mkbibrightborder}{）\unspace}
+
+\makeatletter
+\renewcommand*{\HyperDestNameFilter}[1]{zh-#1}
+\renewcommand{\eqref}[1]{\textup{（\ref{#1}）}}
+\makeatother
+
+\newcommand{\includechapterifexists}[1]{%
+	\IfFileExists{#1.tex}{\include{#1}}{}%
+}
+
+\newif\ifhaszhappendices
+\haszhappendicesfalse
+\IfFileExists{chap/appa.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/appb.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/appc.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/appd.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/appe.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/appf.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/appg.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/apph.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/appi.tex}{\haszhappendicestrue}{}
+\IfFileExists{chap/appj.tex}{\haszhappendicestrue}{}
 
 \begin{document}
 
 \frontmatter
-\pagestyle{empty}
-\cleardoublepage
 \pagestyle{plain}
 \setcounter{page}{0}
 \pagenumbering{Roman}
@@ -35,31 +99,39 @@
 \include{chap/abstract}
 
 % 目录
-\addcontentsline{toc}{chapter}{目录}
 \tableofcontents
 
 % 正文
 \mainmatter
-\include{chap/chap1}
-\include{chap/chap2}
-\include{chap/chap3}
-\include{chap/chap4}
-\include{chap/chap5}
-\include{chap/chap6}
-
-% 参考文献
-\appendix
+\includechapterifexists{chap/chap1}
+\includechapterifexists{chap/chap2}
+\includechapterifexists{chap/chap3}
+\includechapterifexists{chap/chap4}
+\includechapterifexists{chap/chap5}
+\includechapterifexists{chap/chap6}
+\includechapterifexists{chap/chap7}
+\includechapterifexists{chap/chap8}
+\includechapterifexists{chap/chap9}
 \printbibliography[heading=bibintoc]
+
+\ifhaszhappendices
+	\appendix
+	\IfFileExists{chap/appa.tex}{\include{chap/appa}}{}
+	\IfFileExists{chap/appb.tex}{\include{chap/appb}}{}
+	\IfFileExists{chap/appc.tex}{\include{chap/appc}}{}
+	\IfFileExists{chap/appd.tex}{\include{chap/appd}}{}
+	\IfFileExists{chap/appe.tex}{\include{chap/appe}}{}
+	\IfFileExists{chap/appf.tex}{\include{chap/appf}}{}
+	\IfFileExists{chap/appg.tex}{\include{chap/appg}}{}
+	\IfFileExists{chap/apph.tex}{\include{chap/apph}}{}
+	\IfFileExists{chap/appi.tex}{\include{chap/appi}}{}
+	\IfFileExists{chap/appj.tex}{\include{chap/appj}}{}
+\fi
 
 % 致谢 (仅 final 阶段显示)
 \backmatter
-\ifshowacknowledgement
+\ifthenelse{\equal{\stage}{final}}{%
 	\include{chap/acknowledgement}
-\fi
-
-% 原创性声明 (仅 final 阶段显示)
-\iffinal
-\origin
-\fi
+}{}
 
 \end{document}
