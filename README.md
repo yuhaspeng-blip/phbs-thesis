@@ -238,7 +238,7 @@ choco install git
 
 ### 方法一：直接下载
 
-1. 从学长提供的链接下载 ZIP 文件
+1. 从本仓库页面下载 ZIP 文件
 2. 解压到你喜欢的位置（建议放在 `Documents` 或 `桌面`）
 3. **不要放在中文路径下**，否则可能编译失败
 
@@ -987,7 +987,7 @@ VS Code 中：点击右下角的编码 → 选择 `Save with Encoding` → `UTF-
 
 **特别注意**：
 - 格式要求可能每年更新，以附件1为准
-- 如果本模板与附件1有冲突，请联系学长更新模板
+- 如果本模板与附件1有冲突，请以附件1为准，并以本仓库当前版本说明为准
 - 答辩前请再次核对格式要求
 
 ---
@@ -1034,20 +1034,18 @@ VS Code 中：点击右下角的编码 → 选择 `Save with Encoding` → `UTF-
 1. **查阅本文档**：大部分问题这里都有答案
 2. **搜索错误信息**：把错误信息复制到 Google/百度搜索
 3. **询问 ChatGPT/Claude**：描述你的问题和错误信息
-4. **联系学长**：如果以上都不能解决
+4. **查看仓库更新或提交 issue**：如果以上都不能解决，请到仓库检查最新说明或反馈问题
 
 ---
 
 ## 致谢
 
-本模板基于 [iofu728/pkuthss](https://www.overleaf.com/latex/templates/2022-peking-university-master-thesis-template-iofu728-pkuthss/rwfvbkpzydpf) 修改。
+本模板基于 [iofu728/pkuthss](https://www.overleaf.com/latex/templates/2022-peking-university-master-thesis-template-iofu728-pkuthss/rwfvbkpzydpf) 及其后续公开版本整理而来。
 
-由 [知经 KNOWECON](https://knowecon.com) 维护。
+上一版公开模板来源可追溯到 [知经 KNOWECON](https://knowecon.com) 发布版本。
 
-如有问题，请联系学长。
+当前版本由 [yuhaspeng-blip/phbs-thesis](https://github.com/yuhaspeng-blip/phbs-thesis) 仓库维护。
 
 ---
 
 祝毕业顺利！🎓
-
-喵喵学长敬上
