@@ -31,37 +31,6 @@
 % 例如：key = {shen kunrong 2023}。
 % 不把用户手工修改本机 Pinyin.pm 作为模板正式依赖。
 \ExecuteBibliographyOptions{sortlocale = zh__pinyin}
-\DeclareSourcemap{
-	\maps[datatype = bibtex]{
-		\map[overwrite]{
-			\step[fieldset = presort, fieldvalue = {b}]
-		}
-		\map[overwrite]{
-			\step[fieldsource = languageid, match = \regexp{^(zh|chinese)$}, final]
-			\step[fieldset = presort, fieldvalue = {a}]
-		}
-		\map[overwrite]{
-			\step[fieldsource = langid, match = \regexp{^(zh|chinese)$}, final]
-			\step[fieldset = presort, fieldvalue = {a}]
-		}
-		\map[overwrite]{
-			\step[fieldsource = languageid, match = \regexp{^(ja|japanese)$}, final]
-			\step[fieldset = presort, fieldvalue = {c}]
-		}
-		\map[overwrite]{
-			\step[fieldsource = langid, match = \regexp{^(ja|japanese)$}, final]
-			\step[fieldset = presort, fieldvalue = {c}]
-		}
-		\map[overwrite]{
-			\step[fieldsource = languageid, match = \regexp{^(ru|russian)$}, final]
-			\step[fieldset = presort, fieldvalue = {d}]
-		}
-		\map[overwrite]{
-			\step[fieldsource = langid, match = \regexp{^(ru|russian)$}, final]
-			\step[fieldset = presort, fieldvalue = {d}]
-		}
-	}
-}
 
 \renewrobustcmd{\mkbibleftborder}{\allowbreak（}
 \renewrobustcmd{\mkbibrightborder}{）\unspace}

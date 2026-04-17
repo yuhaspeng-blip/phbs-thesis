@@ -25,18 +25,6 @@
 
 % 参考文献
 \addbibresource{ref.bib}
-\DeclareStyleSourcemap{
-	\maps[datatype = bibtex]{
-		\map[overwrite]{
-			\step[fieldsource = languageid, match = \regexp{^(zh|chinese)$}, final]
-			\step[fieldset = namefmtid, fieldvalue = {6}]
-		}
-		\map[overwrite]{
-			\step[fieldsource = langid, match = \regexp{^(zh|chinese)$}, final]
-			\step[fieldset = namefmtid, fieldvalue = {6}]
-		}
-	}
-}
 
 \makeatletter
 \renewcommand*{\HyperDestNameFilter}[1]{en-#1}
